@@ -1,23 +1,49 @@
-# ZK Mixer Project
+# Mixer Contract
 
-- Deposit: users can deposit ETH into the mixer to break the connection between depositor and withdrawer
-- Withdraw: users will withdraw using a ZK proof (Noir - generated off-chain) of knowledge of their deposit.
-- We will only allow users to deposit a fixed amount of ETH (0.001 ETH)
+A privacy-preserving ETH mixer built with Solidity using incremental Merkle trees, Poseidon hashing, and zero-knowledge proofs.
 
-## Proof
-- calculate the commitment using the secret and nullifier
-- We need to check that the commitment is present in the Merkle tree
-  - proposed root
-  - merkle proof
+---
 
-  - check the nullifier matches the (public) nullifier hash
+## Table of Contents
 
-  ### Private Input
-  - Secret
-  - Nullifier
-  - Merkle proof (intermediate nodes required to reconstrut the tree)
-  - boolean to say whether node has an even index
+- [Overview](#overview)  
+- [Features](#features)  
+- [Installation](#installation)  
+- [Usage](#usage)  
+- [Smart Contract Details](#smart-contract-details)  
+- [Events](#events)  
+- [Errors](#errors)  
+- [Testing](#testing)  
+- [License](#license)  
 
-  ### Public Input
-  - Proposed root
-  - nullifier hash
+---
+
+## Overview
+
+The `Mixer` contract allows users to deposit and withdraw ETH privately. It leverages:
+
+- **Incremental Merkle Trees** to store commitments  
+- **Poseidon2 hash function** for secure commitments  
+- **Zero-Knowledge Proofs (ZKPs)** to verify withdrawals without revealing the underlying deposit  
+
+This design ensures that deposited funds can be withdrawn anonymously while preventing double-spending through nullifiers.
+
+---
+
+## Features
+
+- Fixed deposit denomination (`0.001 ETH`)  
+- Private withdrawals via ZK proofs  
+- Incremental Merkle tree for efficient proof verification  
+- Nullifier tracking to prevent double withdrawals  
+- Secure ETH transfers with reentrancy protection  
+
+---
+
+## Installation
+
+```bash
+git clone https://github.com/yabestheodorus/zk-mixer.git
+cd contracts
+forge install
+npm install

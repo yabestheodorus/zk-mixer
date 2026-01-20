@@ -23,7 +23,7 @@ contract IncrementalMerkleTree {
     /*////////////////////////////////////////////////////////////////////////////
                                     STATE VARIABLES
     ///////////////////////////////////////////////////////////////////////////*/
-    uint8 public immutable i_depth;
+    uint32 public immutable i_depth;
 
     mapping(uint256 => bytes32) public s_roots;
     uint32 public constant ROOT_HISTORY_SIZE = 30;
@@ -45,7 +45,7 @@ contract IncrementalMerkleTree {
     /*////////////////////////////////////////////////////////////////////////////
                                         CONSTRUCTOR
     ///////////////////////////////////////////////////////////////////////////*/
-    constructor(uint8 _depth, Poseidon2 _hasher) {
+    constructor(uint32 _depth, Poseidon2 _hasher) {
         if (_depth == 0) {
             revert IncrementalMerkleTree__DepthShouldBeGreaterThanZero();
         }
@@ -75,7 +75,7 @@ contract IncrementalMerkleTree {
 
     function _insert(bytes32 _leaf) internal returns (uint32) {
         uint32 _nextLeafIndex = s_nextLeafIndex;
-        if (_nextLeafIndex == uint8(2) ** i_depth) {
+        if (_nextLeafIndex == uint32(2) ** i_depth) {
             revert IncrementalMerkleTree__MerkleTreeFull(_nextLeafIndex);
         }
 
@@ -84,7 +84,7 @@ contract IncrementalMerkleTree {
         bytes32 currentHash = _leaf;
         bytes32 left;
         bytes32 right;
-        for (uint8 i = 0; i < i_depth; i++) {
+        for (uint32 i = 0; i < i_depth; i++) {
             if (currentIndex % 2 == 0) {
                 // - if index is even, we need to put it on the left of the hash
                 // store the result as a chached of subtree

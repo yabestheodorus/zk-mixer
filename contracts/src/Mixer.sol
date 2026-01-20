@@ -3,16 +3,17 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Mixer
- * @author Yabes Theodorus
- * @notice Short description of contract
- * @dev Created 2026
+ * @author Yabes
+ * @notice A simple ETH mixer using Merkle trees and zero-knowledge proofs for private deposits and withdrawals.
+ * @dev Implements an incremental Merkle tree to store commitments, integrates a Poseidon hasher, and verifies ZK proofs via an external verifier contract.
  */
 
 import {IncrementalMerkleTree} from "./IncrementalMerkleTree.sol";
 import {IVerifier} from "./Verifier.sol";
 import {Poseidon2} from "@poseidon/src/Poseidon2.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract Mixer is IncrementalMerkleTree {
+contract Mixer is IncrementalMerkleTree, ReentrancyGuard {
     error Mixer__CommitmentAlreadyAdded(bytes32 commitment);
     error Mixer__DepositAmountNotCorrect(uint256 amount, uint256 expectedAmount);
     error Mixer__UnknownRoot(bytes32 root);
@@ -28,17 +29,25 @@ contract Mixer is IncrementalMerkleTree {
     event Deposit(bytes32 indexed _commitment, uint32 insertedIndex, uint256 timestamp);
     event Withdrawal(address indexed recipient, bytes32 nullifierHash);
 
-    constructor(IVerifier _verifier, Poseidon2 _hasher, uint8 _merkleTreeDepth)
+    /**
+     * @notice Constructor to initialize the mixer
+     * @param _verifier The external zero-knowledge proof verifier contract
+     * @param _hasher The Poseidon2 hasher used for the Merkle tree
+     * @param _merkleTreeDepth Depth of the incremental Merkle tree
+     */
+    constructor(IVerifier _verifier, Poseidon2 _hasher, uint32 _merkleTreeDepth)
         IncrementalMerkleTree(_merkleTreeDepth, _hasher)
     {
         i_verifier = _verifier;
     }
 
     /**
-     * @notice Deposit funds into the mixer
-     * @param _commitment the poseidon commitment of the nullifier and secret (generated off-chain)
+     * @notice Deposit ETH into the mixer with a zero-knowledge commitment
+     * @param _commitment The Poseidon hash of the nullifier and secret
+     * @dev Requires msg.value to equal the fixed denomination
+     *      Inserts the commitment into the on-chain incremental Merkle tree
      */
-    function deposit(bytes32 _commitment) external payable {
+    function deposit(bytes32 _commitment) external payable nonReentrant {
         // check whether the commitment has already been used so we can prevent a deposit to being added twice
         if (s_commitment[_commitment]) {
             revert Mixer__CommitmentAlreadyAdded(_commitment);
@@ -57,11 +66,17 @@ contract Mixer is IncrementalMerkleTree {
     }
 
     /**
-     * @notice Withdraw funds from te mixer in a private way
-     * @param _proof the proof that user has the right to withdraw (they know a valid commitment)
+     * @notice Withdraw ETH from the mixer privately using a zero-knowledge proof
+     * @param _proof The zero-knowledge proof generated off-chain
+     * @param _root The Merkle root used in the proof
+     * @param _nullifierHash The nullifier hash corresponding to the deposited commitment
+     * @param _recipient The recipient address for the withdrawn ETH
+     * @dev Validates the root exists on-chain, the nullifier is unused, and the proof is valid.
+     *      Marks the nullifier as used and transfers ETH to the recipient.
      */
     function withdraw(bytes calldata _proof, bytes32 _root, bytes32 _nullifierHash, address payable _recipient)
         external
+        nonReentrant
     {
         // check that the root that was used in the proof matches the root on-chain
         if (!isKnownRoot(_root)) {
